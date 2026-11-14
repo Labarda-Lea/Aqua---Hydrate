@@ -1,0 +1,870 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#00b4d8">
+  <meta name="description" content="Aqua — a simple, private water intake tracker that works offline.">
+  <title>Aqua — Hydrate</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --blue: #00b4d8;
+      --blue-dark: #007f9b;
+      --sky: #48cae4;
+      --pale: #8ee7ff;
+      --paler: #b0e7ff;
+      --ink: #000000;
+      --muted: #67818c;
+      --line: #dfedf1;
+      --surface: rgba(255,255,255,.88);
+      --shadow: 0 16px 42px rgba(27,113,139,.10);
+      --success: #178c70;
+      --danger: #bb4b58;
+      --radius: 22px;
+    }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --pale: #10232d;
+      --paler: #152d38;
+      --ink: #e8f8fc;
+      --muted: #a3bdc6;
+      --line: #294653;
+      --surface: rgba(25,49,60,.94);
+      --shadow: 0 16px 42px rgba(0,0,0,.2);
+      --success: #63d1ae;
+      --danger: #ff9ca5;
+    }
+    * { box-sizing: border-box; }
+    body {
+      min-width: 320px; min-height: 100vh; margin: 0; color: var(--ink);
+      background:
+        radial-gradient(ellipse at 86% 4%, rgba(72,202,228,.22), transparent 34rem),
+        radial-gradient(ellipse at 2% 55%, rgba(144,224,239,.22), transparent 28rem),
+        var(--pale);
+      font: 15px/1.5 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      transition: background .25s, color .25s;
+    }
+    .app-logo{
+    width:60px;
+    height:60px;
+    border-radius:16px;
+}
+    button, input, select { font: inherit; }
+    button { color: inherit; }
+    button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible {
+      outline: 3px solid rgba(0,180,216,.4); outline-offset: 3px;
+    }
+    .app-shell { min-height: 100vh; }
+    .topbar {
+      width: min(1120px, calc(100% - 36px)); margin: 0 auto; padding: 21px 0;
+      display: flex; align-items: center; justify-content: space-between; gap: 18px;
+    }
+    .brand { display:flex; align-items:center; gap:10px; font-size: 23px; font-weight: 850; letter-spacing:-.7px; }
+    .brand-mark { width:38px; height:38px; display:grid; place-items:center; color:white; background:linear-gradient(145deg,var(--sky),var(--blue)); border-radius:14px; box-shadow:0 7px 18px rgba(0,180,216,.25); }
+    .brand-mark svg { width:22px; }
+    .topbar-right { display:flex; align-items:center; gap:12px; }
+    .date-label { color:var(--muted); font-size:13px; font-weight:650; }
+    .avatar { width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:var(--surface);border:1px solid var(--line);font-weight:800;color:var(--blue-dark); }
+    main { width:min(1120px,calc(100% - 36px)); margin:0 auto 105px; }
+    .page { display:none; animation: page-in .28s ease both; }
+    .page.active { display:block; }
+    @keyframes page-in { from {opacity:0;transform:translateY(7px)} to {opacity:1;transform:translateY(0)} }
+    .page-heading { display:flex; justify-content:space-between; align-items:flex-end; gap:20px; margin:7px 0 22px; }
+    .eyebrow { color:var(--blue-dark); font-size:11px; font-weight:850; letter-spacing:1.6px; text-transform:uppercase; }
+    h1 { margin:3px 0 0; font-size:clamp(25px,4vw,34px); line-height:1.15; letter-spacing:-1px; }
+    h2 { margin:0; font-size:18px; letter-spacing:-.35px; }
+    h3 { margin:0; font-size:15px; }
+    p { margin:0; }
+    .subtle { color:var(--muted); }
+    .card { background:var(--surface); border:1px solid rgba(137,190,204,.20); border-radius:var(--radius); box-shadow:var(--shadow); backdrop-filter:blur(16px); }
+    .dashboard-grid { display:grid; grid-template-columns:minmax(0,1.42fr) minmax(280px,.88fr); gap:18px; }
+    .hero-card { min-height:395px; padding:28px 30px; position:relative; overflow:hidden; background:linear-gradient(135deg,rgba(255,255,255,.96),rgba(232,250,255,.82)); }
+    :root[data-theme="dark"] .hero-card { background:linear-gradient(135deg,rgba(25,49,60,.96),rgba(19,63,78,.86)); }
+    .hero-card:after { content:""; position:absolute; width:290px;height:290px;right:-115px;top:-145px;border-radius:50%;background:rgba(72,202,228,.10);pointer-events:none; }
+    .welcome-row { display:flex; align-items:center; justify-content:space-between; gap:12px; position:relative; z-index:1; }
+    .welcome-row p { color:var(--muted); margin-top:4px; }
+    .streak-pill { display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:30px;background:rgba(255,184,77,.14);color:#a76b14;font-size:12px;font-weight:800;white-space:nowrap; }
+    :root[data-theme="dark"] .streak-pill { color:#ffd38b; }
+    .progress-layout { display:flex; justify-content:center; align-items:center; gap:clamp(22px,6vw,74px); padding:25px 0 20px; position:relative; z-index:1; }
+    .progress-ring { width:210px;height:210px;position:relative;flex:0 0 auto; }
+    .progress-ring svg { width:100%;height:100%;transform:rotate(-90deg);overflow:visible; }
+    .ring-track,.ring-value { fill:none;stroke-width:11; }
+    .ring-track { stroke:rgba(0,180,216,.12); }
+    .ring-value { stroke:var(--blue);stroke-linecap:round;stroke-dasharray:565.49;stroke-dashoffset:565.49;transition:stroke-dashoffset .8s cubic-bezier(.2,.8,.2,1);filter:drop-shadow(0 3px 5px rgba(0,180,216,.25)); }
+    .ring-center { position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center; }
+    .ring-percent { font-size:38px;font-weight:850;letter-spacing:-2px;line-height:1; }
+    .ring-label { margin-top:8px;color:var(--muted);font-size:12px;font-weight:650; }
+    .intake-total { min-width:135px; }
+    .intake-total strong { display:block;font-size:36px;letter-spacing:-1.6px;line-height:1.1; }
+    .intake-total strong span { font-size:16px;letter-spacing:0;color:var(--muted);font-weight:600; }
+    .intake-total .remaining { margin-top:10px;color:var(--muted);font-size:13px; }
+    .intake-total .remaining b { color:var(--ink); }
+    .progress-track { height:8px;width:100%;margin-top:14px;border-radius:20px;background:rgba(0,180,216,.12);overflow:hidden; }
+    .progress-fill { width:0;height:100%;background:linear-gradient(90deg,var(--sky),var(--blue));border-radius:inherit;transition:width .75s ease; }
+    .goal-caption { margin-top:7px;color:var(--muted);font-size:11px; }
+    .quick-card { padding:24px; }
+    .card-header { display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px; }
+    .quick-grid { display:grid;grid-template-columns:1fr 1fr;gap:10px; }
+    .quick-button { min-height:74px;border:1px solid var(--line);border-radius:17px;background:var(--paler);cursor:pointer;display:flex;align-items:center;gap:11px;padding:12px;transition:transform .15s,background .2s,border .2s;position:relative;overflow:hidden;text-align:left; }
+    .quick-button:hover { transform:translateY(-2px);border-color:rgba(0,180,216,.45);background:rgba(72,202,228,.12); }
+    .drop-icon { width:35px;height:35px;display:grid;place-items:center;background:rgba(0,180,216,.12);color:var(--blue-dark);border-radius:12px;flex-shrink:0; }
+    .drop-icon svg { width:19px;height:19px; }
+    .quick-button b { display:block;font-size:15px; }
+    .quick-button small { display:block;color:var(--muted);font-size:11px; }
+    .custom-button { width:100%;margin-top:10px;border:0;border-radius:15px;background:linear-gradient(100deg,var(--blue),#30c4df);color:white;padding:13px;font-weight:800;cursor:pointer;box-shadow:0 8px 18px rgba(0,180,216,.2); }
+    .custom-button:hover,.primary-button:hover { filter:brightness(.97);transform:translateY(-1px); }
+    .lower-grid { display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px; }
+    .tip-card,.week-card { padding:22px 24px;min-height:160px; }
+    .tip-content { display:flex;align-items:center;gap:16px;margin-top:13px; }
+    .tip-icon { width:47px;height:47px;display:grid;place-items:center;border-radius:16px;background:var(--pale);font-size:22px;flex-shrink:0; }
+    .tip-content p { max-width:440px;color:var(--muted);font-size:13px; }
+    .week-bars { height:76px;display:flex;align-items:flex-end;justify-content:space-between;gap:9px;margin-top:13px; }
+    .week-bar-wrap { height:100%;flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px; }
+    .week-bar { width:min(26px,80%);min-height:3px;border-radius:8px 8px 4px 4px;background:linear-gradient(180deg,var(--sky),var(--blue));transition:height .5s; }
+    .week-bar.today { background:linear-gradient(180deg,#7ce5bb,#31b88b); }
+    .week-bar-wrap small { font-size:10px;color:var(--muted); }
+    .page-actions { display:flex;gap:9px;align-items:center;flex-wrap:wrap; }
+    .control,.secondary-button,.danger-button,.primary-button { border:1px solid var(--line);border-radius:13px;background:var(--surface);padding:10px 14px;cursor:pointer;font-weight:700;transition:transform .15s,background .15s; }
+    .control { color:var(--ink); }
+    .secondary-button:hover { background:var(--paler); }
+    .primary-button { border:0;background:linear-gradient(100deg,var(--blue),#30c4df);color:white;box-shadow:0 7px 16px rgba(0,180,216,.18); }
+    .danger-button { color:var(--danger);border-color:rgba(187,75,88,.25); }
+    .small-button { padding:7px 10px;font-size:12px; }
+    .summary-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:18px; }
+    .summary-card { padding:18px 20px; }
+    .summary-label { color:var(--muted);font-size:12px;font-weight:650; }
+    .summary-number { margin-top:7px;font-size:27px;font-weight:850;letter-spacing:-1px; }
+    .summary-number span { font-size:13px;letter-spacing:0;color:var(--muted);font-weight:600; }
+    .history-card,.chart-card,.settings-card { padding:23px; }
+    .table-wrap { width:100%;overflow-x:auto; }
+    table { width:100%;border-collapse:collapse;min-width:520px; }
+    th { text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.8px;padding:11px 9px;border-bottom:1px solid var(--line); }
+    td { padding:14px 9px;border-bottom:1px solid var(--line);font-size:13px; }
+    tr:last-child td { border-bottom:0; }
+    .status-badge { display:inline-flex;padding:5px 9px;border-radius:30px;background:rgba(23,140,112,.1);color:var(--success);font-size:11px;font-weight:800; }
+    .status-badge.pending { background:rgba(103,129,140,.1);color:var(--muted); }
+    .empty-state { padding:42px 18px;text-align:center;color:var(--muted); }
+    .empty-state .empty-icon { font-size:32px;margin-bottom:8px; }
+    .chart-card { margin-bottom:18px; }
+    .chart-area { height:230px;margin-top:18px;position:relative; }
+    .chart-area canvas { width:100%;height:100%; }
+    .chart-legend { display:flex;gap:15px;flex-wrap:wrap;color:var(--muted);font-size:11px;margin-top:5px; }
+    .legend-dot { display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;background:var(--blue); }
+    .achievements-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px; }
+    .badge-card { padding:19px;display:flex;align-items:flex-start;gap:13px; }
+    .badge-icon { width:46px;height:46px;display:grid;place-items:center;border-radius:15px;background:rgba(255,190,75,.16);font-size:23px;flex-shrink:0; }
+    .badge-card.locked { opacity:.58;filter:grayscale(.7); }
+    .badge-card p { margin-top:4px;color:var(--muted);font-size:12px; }
+    .badge-status { margin-top:8px;color:var(--success);font-size:10px;font-weight:850;letter-spacing:.7px;text-transform:uppercase; }
+    .settings-layout { display:grid;grid-template-columns:1fr 1fr;gap:17px; }
+    .settings-card { margin-bottom:17px; }
+    .settings-card > h2 { margin-bottom:16px; }
+    .setting-row { display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 0;border-top:1px solid var(--line); }
+    .setting-row:first-of-type { border-top:0;padding-top:0; }
+    .setting-row p { color:var(--muted);font-size:12px;margin-top:3px; }
+    .settings-actions { display:flex;flex-wrap:wrap;gap:8px; }
+    .switch { appearance:none;width:44px;height:25px;border:0;border-radius:20px;background:#a9bdc4;position:relative;cursor:pointer;transition:background .2s;flex:0 0 auto; }
+    .switch:before { content:"";position:absolute;width:19px;height:19px;border-radius:50%;background:white;top:3px;left:3px;transition:transform .2s;box-shadow:0 1px 3px #0002; }
+    .switch:checked { background:var(--blue); }
+    .switch:checked:before { transform:translateX(19px); }
+    .field { display:flex;flex-direction:column;gap:6px;margin-bottom:14px; }
+    .field label { font-size:12px;font-weight:750; }
+    .field input,.field select { width:100%;border:1px solid var(--line);border-radius:12px;padding:12px 13px;background:var(--paler);color:var(--ink); }
+    .field input[aria-invalid="true"] { border-color:var(--danger); }
+    .field-error { min-height:15px;color:var(--danger);font-size:11px; }
+    .form-grid { display:grid;grid-template-columns:1fr 1fr;gap:0 13px; }
+    .span-two { grid-column:1/-1; }
+    .onboarding-wrap { min-height:calc(100vh - 100px);display:grid;place-items:center;padding:18px 0 55px; }
+    .onboarding-card { width:min(560px,100%);padding:clamp(23px,5vw,42px); }
+    .onboarding-intro { text-align:center;margin:0 auto 26px;max-width:390px; }
+    .onboarding-drop { width:60px;height:60px;margin:0 auto 15px;border-radius:21px;background:linear-gradient(145deg,var(--sky),var(--blue));display:grid;place-items:center;color:white;box-shadow:0 11px 24px rgba(0,180,216,.24); }
+    .onboarding-drop svg { width:32px; }
+    .onboarding-intro p { margin-top:9px;color:var(--muted); }
+    .form-note { color:var(--muted);font-size:11px;margin:3px 0 18px; }
+    .bottom-nav { position:fixed;bottom:0;left:0;right:0;z-index:10;padding:10px 12px max(10px,env(safe-area-inset-bottom));background:var(--surface);border-top:1px solid var(--line);backdrop-filter:blur(18px); }
+    .nav-items { display:flex;justify-content:center;gap:clamp(2px,3vw,22px);width:min(650px,100%);margin:auto; }
+    .nav-button { min-width:62px;flex:1;border:0;background:none;color:var(--muted);padding:5px 8px;border-radius:15px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;font-weight:750;cursor:pointer; }
+    .nav-button svg { width:20px;height:20px; }
+    .nav-button.active { color:var(--blue-dark);background:rgba(0,180,216,.10); }
+    .toast { position:fixed;bottom:90px;left:50%;z-index:30;transform:translate(-50%,14px);opacity:0;pointer-events:none;max-width:calc(100% - 30px);padding:11px 16px;border-radius:13px;background:#173d4b;color:#fff;box-shadow:0 10px 30px #002b3b35;font-size:13px;transition:.22s; }
+    .toast.show { transform:translate(-50%,0);opacity:1; }
+    .toast.error { background:#9c3444; }
+    .modal-backdrop { position:fixed;inset:0;z-index:25;background:rgba(13,39,50,.45);display:none;place-items:center;padding:18px; }
+    .modal-backdrop.open { display:grid;animation:fade-in .18s ease; }
+    @keyframes fade-in { from{opacity:0}to{opacity:1} }
+    .modal { width:min(420px,100%);padding:24px;background:var(--surface);border-radius:22px;box-shadow:0 24px 80px #001c2b45; }
+    .modal > p { color:var(--muted);font-size:13px;margin:6px 0 18px; }
+    .modal-actions { display:flex;justify-content:flex-end;gap:8px;margin-top:14px; }
+    .loading { opacity:.62;pointer-events:none; }
+    .loading .primary-button:after { content:"";display:inline-block;width:13px;height:13px;margin-left:8px;vertical-align:-2px;border:2px solid #ffffff80;border-top-color:white;border-radius:50%;animation:spin .7s linear infinite; }
+    @keyframes spin { to{transform:rotate(360deg)} }
+    .ripple { position:absolute;border-radius:50%;background:rgba(255,255,255,.6);transform:scale(0);animation:ripple .5s linear;pointer-events:none; }
+    @keyframes ripple { to {transform:scale(4);opacity:0} }
+    .toast[role="status"] {
+      position:fixed;
+bottom:100px;
+left:50%;
+transform:translateX(-50%);
+
+padding:12px 20px;
+
+background:#143747;
+color:white;
+
+border-radius:16px;
+     }
+    @media(max-width:760px) {
+      .dashboard-grid { grid-template-columns:1fr; }
+      .hero-card { min-height:0; }
+      .progress-layout { gap:clamp(20px,8vw,60px); }
+      .lower-grid { grid-template-columns:1fr; }
+      .settings-layout { grid-template-columns:1fr;gap:0; }
+      .summary-grid { gap:8px; }
+      .summary-card { padding:14px; }
+      .summary-number { font-size:22px; }
+    }
+    @media(max-width:480px) {
+      .topbar,main { width:calc(100% - 24px); }
+      .topbar { padding:13px 0; }
+      .date-label { display:none; }
+      main { margin-bottom:95px; }
+      .page-heading { align-items:flex-start;flex-direction:column;margin:9px 0 17px; }
+      .hero-card { padding:20px 17px; }
+      .progress-layout { justify-content:space-around;gap:10px;padding:24px 0 18px; }
+      .progress-ring { width:160px;height:160px; }
+      .ring-percent { font-size:31px; }
+      .intake-total { min-width:0; }
+      .intake-total strong { font-size:29px; }
+      .quick-card,.tip-card,.week-card,.history-card,.chart-card,.settings-card { padding:18px; }
+      .quick-button { min-height:66px;padding:9px;gap:8px; }
+      .drop-icon { width:31px;height:31px; }
+      .summary-grid { grid-template-columns:1fr 1fr; }
+      .summary-card:last-child { grid-column:1/-1; }
+      .form-grid { grid-template-columns:1fr; }
+      .span-two { grid-column:auto; }
+      .nav-items { gap:0; }
+      .nav-button { min-width:0;padding:5px 3px;font-size:9px; }
+    }
+    @media(prefers-reduced-motion:reduce) { *,*:before,*:after { scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important; } }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand"><img src="logo.jpg" alt="Aqua-HydraTrack Logo" class="app-logo"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2.8C9.1 7 5.7 10.1 5.7 14.2a6.3 6.3 0 0 0 12.6 0C18.3 10.1 14.9 7 12 2.8Z" fill="currentColor"/><path d="M8.8 15.2c.2 1.7 1.4 2.8 3.1 3" stroke="#48CAE4" stroke-width="1.7" stroke-linecap="round"/></svg></span>Aqua</div>
+      <div class="topbar-right"><span class="date-label" id="headerDate"></span><span class="avatar" id="avatar" aria-label="Profile">A</span></div>
+    </header>
+    <main>
+      <section id="onboardingPage" class="page">
+        <div class="onboarding-wrap">
+          <div class="card onboarding-card">
+            <div class="onboarding-intro">
+              <div class="onboarding-drop" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2.8C9.1 7 5.7 10.1 5.7 14.2a6.3 6.3 0 0 0 12.6 0C18.3 10.1 14.9 7 12 2.8Z" fill="currentColor"/><path d="M8.8 15.2c.2 1.7 1.4 2.8 3.1 3" stroke="#48CAE4" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+              <div class="eyebrow">A healthier habit starts with a glass of water</div>
+              <h1 id="onboardingTitle">Meet your water goals</h1>
+              <p>Set up your profile to get a personalized daily hydration goal.</p>
+            </div>
+            <form id="profileForm" novalidate>
+              <div class="form-grid">
+                <div class="field span-two"><label for="profileName">Name</label><input id="profileName" name="name" autocomplete="given-name" maxlength="60" required placeholder="e.g. Alex Morgan"><span class="field-error" id="nameError"></span></div>
+                <div class="field"><label for="profileAge">Age</label><input id="profileAge" name="age" type="number" min="1" max="120" step="1" required placeholder="25"><span class="field-error" id="ageError"></span></div>
+                <div class="field"><label for="profileHeight">Height (cm)</label><input id="profileHeight" name="height" type="number" min="50" max="250" step="0.1" required placeholder="170"><span class="field-error" id="heightError"></span></div>
+                <div class="field span-two"><label for="profileWeight">Weight (kg)</label><input id="profileWeight" name="weight" type="number" min="10" max="300" step="0.1" required placeholder="70"><span class="field-error" id="weightError"></span></div>
+              </div>
+              <p class="form-note">Your daily goal is estimated as weight × 35 ml. This is a general guide, not medical advice.</p>
+              <button class="primary-button" id="profileSubmit" type="submit" style="width:100%;padding:13px">Create Profile</button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <section id="dashboardPage" class="page">
+        <div class="page-heading"><div><div class="eyebrow">Your hydration today</div><h1>Dashboard</h1></div><button class="control small-button" data-go="settings" aria-label="Open settings">⚙ Settings</button></div>
+        <div class="dashboard-grid">
+          <article class="card hero-card">
+            <div class="welcome-row"><div><h2 id="welcomeTitle">Good day</h2><p id="welcomeSubtitle">Small sips add up.</p></div><div class="streak-pill"><span>🔥</span><span id="streakCount">0 day streak</span></div></div>
+            <div class="progress-layout">
+              <div class="progress-ring" role="img" id="progressDescription" aria-label="0% of daily goal">
+                <svg viewBox="0 0 200 200" aria-hidden="true"><circle class="ring-track" cx="100" cy="100" r="90"/><circle class="ring-value" id="ringValue" cx="100" cy="100" r="90"/></svg>
+                <div class="ring-center"><div class="ring-percent" id="progressPercent">0%</div><div class="ring-label">of daily goal</div></div>
+              </div>
+              <div class="intake-total"><strong><span id="currentIntake">0</span> <span>ml</span></strong><div class="remaining" id="remainingText">0 ml remaining</div><div class="progress-track"><div class="progress-fill" id="progressFill"></div></div><div class="goal-caption">Daily goal · <span id="goalAmount">2,500</span> ml</div></div>
+            </div>
+          </article>
+          <article class="card quick-card">
+            <div class="card-header"><div><div class="eyebrow">Log a drink</div><h2 style="margin-top:3px">Quick add</h2></div><span aria-hidden="true" style="font-size:22px">💧</span></div>
+            <div class="quick-grid">
+              <button class="quick-button" data-add="100"><span class="drop-icon" aria-hidden="true">💧</span><span><b>+100 ml</b><small>Small glass</small></span></button>
+              <button class="quick-button" data-add="250"><span class="drop-icon" aria-hidden="true">💧</span><span><b>+250 ml</b><small>One glass</small></span></button>
+              <button class="quick-button" data-add="500"><span class="drop-icon" aria-hidden="true">💧</span><span><b>+500 ml</b><small>Water bottle</small></span></button>
+              <button class="quick-button" data-add="1000"><span class="drop-icon" aria-hidden="true">💧</span><span><b>+1,000 ml</b><small>Large bottle</small></span></button>
+            </div>
+            <button class="custom-button" id="customAmountButton">＋ Add a custom amount</button>
+          </article>
+        </div>
+        <div class="lower-grid">
+          <article class="card tip-card"><div class="card-header" style="margin:0"><h2>Daily hydration tip</h2><span aria-hidden="true">✨</span></div><div class="tip-content"><div class="tip-icon" aria-hidden="true">🌊</div><p id="dailyTip"></p></div></article>
+          <article class="card week-card"><div class="card-header" style="margin:0"><h2>This week</h2><button class="control small-button" data-go="analytics">Details</button></div><div class="week-bars" id="weekBars" aria-label="Last seven days intake"></div></article>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:13px"><button class="danger-button small-button" id="resetDayButton">Reset today's intake</button></div>
+      </section>
+
+      <section id="historyPage" class="page">
+        <div class="page-heading"><div><div class="eyebrow">Your hydration log</div><h1>Intake history</h1></div><div class="page-actions"><select class="control" id="historyRange" aria-label="History range"><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select><input class="control" id="historyDate" type="date" aria-label="Filter from date"></div></div>
+        <div class="summary-grid"><article class="card summary-card"><div class="summary-label">Period intake</div><div class="summary-number" id="historyTotal">0 <span>ml</span></div></article><article class="card summary-card"><div class="summary-label">Daily average</div><div class="summary-number" id="historyAverage">0 <span>ml</span></div></article><article class="card summary-card"><div class="summary-label">Goals reached</div><div class="summary-number" id="historyGoals">0 <span>days</span></div></article></div>
+        <article class="card history-card"><div class="card-header"><div><h2>Daily records</h2><p class="subtle" style="font-size:12px;margin-top:4px" id="historyCaption"></p></div></div><div class="table-wrap" id="historyTable"></div></article>
+      </section>
+
+      <section id="analyticsPage" class="page">
+        <div class="page-heading"><div><div class="eyebrow">Patterns & progress</div><h1>Analytics</h1></div><select class="control" id="analyticsRange" aria-label="Chart range"><option value="weekly">Last 7 days</option><option value="monthly">Last 30 days</option></select></div>
+        <div class="summary-grid"><article class="card summary-card"><div class="summary-label">Average daily intake</div><div class="summary-number" id="analyticsAverage">0 <span>ml</span></div></article><article class="card summary-card"><div class="summary-label">Goal completion</div><div class="summary-number" id="analyticsCompletion">0<span>%</span></div></article><article class="card summary-card"><div class="summary-label">Longest streak</div><div class="summary-number" id="longestStreak">0 <span>days</span></div></article></div>
+        <article class="card chart-card"><div class="card-header"><div><h2 id="chartTitle">Weekly intake trends</h2><p class="subtle" style="font-size:12px;margin-top:4px">Your logged water compared with your daily goal</p></div></div><div class="chart-area"><canvas id="intakeChart" role="img" aria-label="Water intake trend chart"></canvas></div><div class="chart-legend"><span><i class="legend-dot"></i>Intake</span><span><i class="legend-dot" style="background:#b4cbd2"></i>Daily goal</span></div></article>
+      </section>
+
+      <section id="achievementsPage" class="page">
+        <div class="page-heading"><div><div class="eyebrow">Every sip counts</div><h1>Achievements</h1></div><div class="streak-pill"><span>🏆</span><span id="badgeSummary">0 of 7 unlocked</span></div></div>
+        <div class="achievements-grid" id="achievementsGrid"></div>
+      </section>
+
+      <section id="settingsPage" class="page">
+        <div class="page-heading"><div><div class="eyebrow">Make Aqua yours</div><h1>Settings</h1></div></div>
+        <div class="settings-layout">
+          <div>
+            <article class="card settings-card"><h2>Profile</h2><div class="setting-row"><div><strong id="settingsName">Your profile</strong><p id="settingsDetails"></p></div><button class="control small-button" id="editProfileButton">Edit profile</button></div><div class="setting-row"><div><strong>Daily water goal</strong><p>Calculated from your weight · 35 ml per kg</p></div><strong id="settingsGoal"></strong></div></article>
+            <article class="card settings-card"><h2>Appearance</h2><div class="setting-row"><div><strong>Dark mode</strong><p>Use a darker color palette</p></div><input class="switch" id="darkModeToggle" type="checkbox" role="switch" aria-label="Dark mode"></div></article>
+            <article class="card settings-card"><h2>Data & privacy</h2><p class="subtle" style="font-size:12px;margin:-8px 0 15px">Your data stays in this browser on this device. No account or internet required.</p><div class="settings-actions"><button class="control" id="exportButton">Export my data</button><button class="danger-button" id="resetDataButton">Reset all data</button></div></article>
+          </div>
+          <div>
+            <article class="card settings-card"><h2>Reminders</h2><div class="setting-row"><div><strong>Hydration reminders</strong><p>Local reminders while Aqua is open</p></div><input class="switch" id="notificationToggle" type="checkbox" role="switch" aria-label="Enable hydration reminders"></div><div class="field"><label for="reminderFrequency">Reminder frequency</label><select id="reminderFrequency"><option value="30">Every 30 minutes</option><option value="60">Every hour</option><option value="120">Every 2 hours</option><option value="180">Every 3 hours</option></select></div><div class="form-grid"><div class="field"><label for="quietStart">Quiet hours start</label><input id="quietStart" type="time"></div><div class="field"><label for="quietEnd">Quiet hours end</label><input id="quietEnd" type="time"></div></div><p class="subtle" style="font-size:11px">Notifications require browser permission and only run while this page is open.</p></article>
+            <article class="card settings-card"><h2>About Aqua</h2><p class="subtle" style="font-size:13px">Aqua is a private, offline-first hydration companion. Water goals are estimates and are not a substitute for professional medical advice.</p><p style="font-size:12px;margin-top:12px;font-weight:700">Aqua · Version 1.0</p></article>
+          </div>
+        </div>
+      </section>
+    </main>
+    <nav class="bottom-nav" id="bottomNav" aria-label="Main navigation">
+      <div class="nav-items">
+        <button class="nav-button active" data-page="dashboard" aria-label="Home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg><span>Home</span></button>
+        <button class="nav-button" data-page="history" aria-label="History"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3v5h5m4-1v5l3 2"/></svg><span>History</span></button>
+        <button class="nav-button" data-page="analytics" aria-label="Analytics"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V5m0 14h17"/><path d="m7 15 4-4 3 2 5-6"/></svg><span>Analytics</span></button>
+        <button class="nav-button" data-page="achievements" aria-label="Achievements"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="5"/><path d="m8.5 12-1 9 4.5-2.5 4.5 2.5-1-9M9 8l2 2 4-4"/></svg><span>Badges</span></button>
+        <button class="nav-button" data-page="settings" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="m19.4 15 .1.1a1.7 1.7 0 1 1-2.4 2.4l-.1-.1a1.7 1.7 0 0 0-2.9 1.2v.2a1.7 1.7 0 1 1-3.4 0v-.2a1.7 1.7 0 0 0-2.9-1.2l-.1.1a1.7 1.7 0 1 1-2.4-2.4l.1-.1a1.7 1.7 0 0 0-1.2-2.9H4a1.7 1.7 0 1 1 0-3.4h.2a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a1.7 1.7 0 1 1 2.4-2.4l.1.1a1.7 1.7 0 0 0 2.9-1.2V2a1.7 1.7 0 1 1 3.4 0v.2a1.7 1.7 0 0 0 2.9 1.2l.1-.1a1.7 1.7 0 1 1 2.4 2.4l-.1.1a1.7 1.7 0 0 0 1.2 2.9h.2a1.7 1.7 0 1 1 0 3.4h-.2a1.7 1.7 0 0 0-1.2 2.9Z"/></svg><span>Settings</span></button>
+      </div>
+    </nav>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div class="modal-backdrop" id="customModal" role="dialog" aria-modal="true" aria-labelledby="customModalTitle">
+    <div class="modal"><h2 id="customModalTitle">Add water intake</h2><p>Enter the amount you drank in milliliters.</p><form id="customForm" novalidate><div class="field"><label for="customAmount">Amount (ml)</label><input id="customAmount" type="number" min="1" max="10000" step="1" inputmode="numeric" placeholder="e.g. 350" required><span class="field-error" id="customError"></span></div><div class="modal-actions"><button type="button" class="control" id="cancelCustom">Cancel</button><button type="submit" class="primary-button">Add water</button></div></form></div>
+  </div>
+  <div class="modal-backdrop" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <div class="modal"><h2 id="confirmTitle">Are you sure?</h2><p id="confirmMessage"></p><div class="modal-actions"><button class="control" id="confirmCancel">Cancel</button><button class="danger-button" id="confirmAccept">Continue</button></div></div>
+  </div>
+
+  <script>
+    (() => {
+      "use strict";
+      const STORAGE_KEY = "aquaTrackerData";
+      const DEFAULTS = {
+        profile: null, currentIntake: 0, dailyGoal: 2500, goalAchieved: false,
+        currentStreak: 0, notificationEnabled: true, reminderFrequency: 60,
+        quietStart: "22:00", quietEnd: "08:00", theme: "light", history: {}
+      };
+      const TIPS = [
+        "Keep a reusable bottle within reach. A visual reminder makes regular sipping easier.",
+        "Drink a glass of water with meals to build hydration into your daily routine.",
+        "Sip consistently throughout the day instead of trying to catch up all at once.",
+        "After a walk or workout, remember to drink water to replace fluid loss.",
+        "Start your morning with a glass of water and set a gentle rhythm for the day.",
+        "Foods like cucumber, melon, and oranges can also contribute to your fluid intake.",
+        "Try pairing a few sips of water with everyday transitions, like finishing a task."
+      ];
+      const BADGES = [
+        { id:"first", icon:"💧", title:"First Day Hydrated", description:"Reach your daily water goal once.", unlocked:s=>s.goalDays.length>=1 },
+        { id:"streak3", icon:"🔥", title:"3-Day Streak", description:"Reach your goal three days in a row.", unlocked:s=>s.longestStreak>=3 },
+        { id:"streak7", icon:"🌟", title:"7-Day Streak", description:"Reach your goal seven days in a row.", unlocked:s=>s.longestStreak>=7 },
+        { id:"streak14", icon:"🏅", title:"14-Day Streak", description:"Reach your goal fourteen days in a row.", unlocked:s=>s.longestStreak>=14 },
+        { id:"streak30", icon:"👑", title:"30-Day Streak", description:"Reach your goal thirty days in a row.", unlocked:s=>s.longestStreak>=30 },
+        { id:"master", icon:"🎯", title:"Goal Master", description:"Reach your daily goal on seven days.", unlocked:s=>s.goalDays.length>=7 },
+        { id:"champion", icon:"🏆", title:"Hydration Champion", description:"Reach your daily goal on thirty days.", unlocked:s=>s.goalDays.length>=30 }
+      ];
+      let state = loadState();
+      let currentPage = "dashboard";
+      let toastTimer;
+      let reminderTimer;
+      let pendingConfirm = null;
+      const $ = id => document.getElementById(id);
+      const todayKey = () => dateKey(new Date());
+      const dateKey = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+      const formatNumber = value => Math.round(value).toLocaleString();
+      const safeInt = value => Number.isSafeInteger(value) && value >= 0;
+
+      function loadState() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return structuredClone(DEFAULTS);
+          const parsed = JSON.parse(raw);
+          if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("Saved data is invalid.");
+          const merged = { ...DEFAULTS, ...parsed, history: parsed.history && typeof parsed.history === "object" ? parsed.history : {} };
+          if (merged.profile && (typeof merged.profile.name !== "string" || !Number.isFinite(merged.profile.weight))) merged.profile = null;
+          if (!safeInt(merged.currentIntake)) merged.currentIntake = 0;
+          if (!safeInt(merged.dailyGoal) || merged.dailyGoal < 1) merged.dailyGoal = 2500;
+          return merged;
+        } catch (error) {
+          console.error("Could not load Aqua data:", error);
+          try { localStorage.removeItem(STORAGE_KEY); } catch (removeError) { console.error("Could not clear invalid Aqua data:", removeError); }
+          setTimeout(() => showToast("Saved data could not be read. A fresh profile is ready.", true), 0);
+          return structuredClone(DEFAULTS);
+        }
+      }
+
+      function saveState() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+          return true;
+        } catch (error) {
+          console.error("Could not save Aqua data:", error);
+          showToast("Could not save data. Check this device's available storage.", true);
+          return false;
+        }
+      }
+
+      function showToast(message, isError=false) {
+        const toast = $("toast");
+        toast.textContent = message;
+        toast.classList.toggle("error", isError);
+        toast.classList.add("show");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove("show"), 2800);
+      }
+
+      function setPage(page) {
+        if (page !== "onboarding" && !state.profile) page = "onboarding";
+        currentPage = page;
+        document.querySelectorAll(".page").forEach(section => section.classList.toggle("active", section.id === `${page}Page`));
+        document.querySelectorAll(".nav-button").forEach(button => {
+          const active = button.dataset.page === page;
+          button.classList.toggle("active", active);
+          if (active) button.setAttribute("aria-current","page"); else button.removeAttribute("aria-current");
+        });
+        $("bottomNav").hidden = page === "onboarding";
+        if (page === "history") renderHistory();
+        if (page === "analytics") renderAnalytics();
+        if (page === "achievements") renderAchievements();
+        if (page === "settings") renderSettings();
+        window.scrollTo({top:0,behavior:"smooth"});
+      }
+
+      function render() {
+        const today = todayKey();
+        if (state.profile && state._activeDate !== today) {
+          state._activeDate = today;
+          state.currentIntake = state.history[today] ? state.history[today].intake : 0;
+          state.goalAchieved = state.currentIntake >= state.dailyGoal;
+          updateStreak();
+          saveState();
+        }
+        $("headerDate").textContent = new Intl.DateTimeFormat(undefined,{weekday:"short",month:"short",day:"numeric"}).format(new Date());
+        $("avatar").textContent = state.profile ? state.profile.name.trim().charAt(0).toUpperCase() : "A";
+        document.documentElement.dataset.theme = state.theme === "dark" ? "dark" : "light";
+        if (!state.profile) { setPage("onboarding"); return; }
+        $("welcomeTitle").textContent = `Hello, ${state.profile.name.trim().split(/\s+/)[0]}`;
+        $("welcomeSubtitle").textContent = state.goalAchieved ? "You reached your hydration goal today. Amazing!" : "Every sip brings you closer to your goal.";
+        $("streakCount").textContent = `${state.currentStreak} ${state.currentStreak === 1 ? "day" : "day"} streak`;
+        $("currentIntake").textContent = formatNumber(state.currentIntake);
+        $("goalAmount").textContent = formatNumber(state.dailyGoal);
+        const ratio = state.dailyGoal > 0 ? state.currentIntake / state.dailyGoal : 0;
+        const percent = Math.round(ratio * 100);
+        $("progressPercent").textContent = `${percent}%`;
+        $("progressDescription").setAttribute("aria-label",`${percent}% of daily goal`);
+        $("ringValue").style.strokeDashoffset = String(565.49 * (1 - Math.min(ratio,1)));
+        $("progressFill").style.width = `${Math.min(ratio*100,100)}%`;
+        $("remainingText").innerHTML = state.currentIntake >= state.dailyGoal
+          ? "<b>Daily goal reached!</b>" : `<b>${formatNumber(state.dailyGoal-state.currentIntake)} ml</b> remaining`;
+        $("dailyTip").textContent = TIPS[(Math.floor(Date.now()/86400000)+new Date().getTimezoneOffset()) % TIPS.length];
+        $("historyDate").value = $("historyDate").value || today;
+        renderWeekBars();
+        if (currentPage === "history") renderHistory();
+        if (currentPage === "analytics") renderAnalytics();
+        if (currentPage === "achievements") renderAchievements();
+        if (currentPage === "settings") renderSettings();
+      }
+
+      function updateStreak() {
+        const goalDays = getGoalDays();
+        let streak = 0;
+        const cursor = new Date();
+        if (!goalDays.includes(dateKey(cursor))) cursor.setDate(cursor.getDate()-1);
+        while (goalDays.includes(dateKey(cursor)) && streak < 3660) {
+          streak++;
+          cursor.setDate(cursor.getDate()-1);
+        }
+        state.currentStreak = streak;
+      }
+
+      function getGoalDays() {
+        return Object.entries(state.history)
+          .filter(([key, record]) => /^\d{4}-\d{2}-\d{2}$/.test(key) && record && Number(record.intake) >= Number(record.goal || state.dailyGoal))
+          .map(([key]) => key).sort();
+      }
+
+      function getLongestStreak() {
+        const days = getGoalDays();
+        let longest=0, current=0, previous=null;
+        days.forEach(key => {
+          const day = new Date(`${key}T12:00:00`);
+          if (previous) {
+            const diff = Math.round((day-previous)/86400000);
+            current = diff === 1 ? current+1 : 1;
+          } else current=1;
+          longest=Math.max(longest,current); previous=day;
+        });
+        return longest;
+      }
+
+      function recordToday() {
+        const key = todayKey();
+        const prior = state.history[key] || {};
+        state.history[key] = { intake:state.currentIntake, goal:state.dailyGoal, updatedAt:new Date().toISOString(), ...prior, intake:state.currentIntake, goal:state.dailyGoal };
+        state.goalAchieved = state.currentIntake >= state.dailyGoal;
+        updateStreak();
+        saveState();
+        render();
+      }
+
+      function addWater(amount) {
+        if (!Number.isSafeInteger(amount) || amount <= 0 || amount > 10000) {
+          showToast("Enter a whole amount from 1 to 10,000 ml.",true); return;
+        }
+        if (state.currentIntake > Number.MAX_SAFE_INTEGER-amount) {
+          showToast("That amount is too large to add.",true); return;
+        }
+        const wasAchieved = state.goalAchieved;
+        state.currentIntake += amount;
+        recordToday();
+        showToast(state.goalAchieved && !wasAchieved ? "Daily goal reached — fantastic work!" : `${formatNumber(amount)} ml added`);
+      }
+
+      function renderWeekBars() {
+        const root = $("weekBars");
+        const values = [];
+        for (let offset=6;offset>=0;offset--) {
+          const date=new Date(); date.setDate(date.getDate()-offset);
+          const key=dateKey(date);
+          const amount=key===todayKey()?state.currentIntake:(state.history[key]?.intake || 0);
+          values.push({day:new Intl.DateTimeFormat(undefined,{weekday:"narrow"}).format(date),amount,today:offset===0});
+        }
+        root.innerHTML=values.map(item=>`<div class="week-bar-wrap" title="${formatNumber(item.amount)} ml"><div class="week-bar${item.today?" today":""}" style="height:${Math.max(4,Math.min(100,item.amount/Math.max(state.dailyGoal,1)*75))}%"></div><small>${escapeHtml(item.day)}</small></div>`).join("");
+      }
+
+      function dateRecord(key) {
+        if (key===todayKey()) return {intake:state.currentIntake,goal:state.dailyGoal};
+        return state.history[key] || {intake:0,goal:state.dailyGoal};
+      }
+
+      function getRangeKeys(anchorKey,range) {
+        const anchor=new Date(`${anchorKey || todayKey()}T12:00:00`);
+        if (Number.isNaN(anchor.getTime())) return [todayKey()];
+        const count=range==="daily"?1:range==="weekly"?7:30;
+        return Array.from({length:count},(_,index)=>{
+          const day=new Date(anchor); day.setDate(anchor.getDate()-(count-1-index)); return dateKey(day);
+        });
+      }
+
+      function renderHistory() {
+        const range=$("historyRange").value;
+        const anchor=$("historyDate").value || todayKey();
+        const keys=getRangeKeys(anchor,range);
+        const records=keys.map(key=>({key,...dateRecord(key)})).reverse();
+        const total=records.reduce((sum,row)=>sum+Number(row.intake||0),0);
+        const goals=records.filter(row=>Number(row.intake||0)>=Number(row.goal||state.dailyGoal)).length;
+        $("historyTotal").innerHTML=`${formatNumber(total)} <span>ml</span>`;
+        $("historyAverage").innerHTML=`${formatNumber(total/Math.max(1,records.length))} <span>ml</span>`;
+        $("historyGoals").innerHTML=`${goals} <span>${goals===1?"day":"days"}</span>`;
+        $("historyCaption").textContent=range==="daily"?"Selected day":range==="weekly"?"Selected day and previous 6 days":"Selected day and previous 29 days";
+        const hasAny=records.some(row=>row.intake>0);
+        if (!hasAny) {
+          $("historyTable").innerHTML='<div class="empty-state"><div class="empty-icon">💧</div><strong>No intake logged in this period</strong><p style="margin-top:5px;font-size:12px">Add water from Home and your records will appear here.</p></div>';
+          return;
+        }
+        $("historyTable").innerHTML=`<table><thead><tr><th>Date</th><th>Intake</th><th>Goal</th><th>Progress</th><th>Status</th></tr></thead><tbody>${records.map(row=>{
+          const pct=Math.round(Number(row.intake||0)/Math.max(Number(row.goal)||state.dailyGoal,1)*100);
+          const achieved=Number(row.intake||0)>=Number(row.goal||state.dailyGoal);
+          return `<tr><td>${escapeHtml(new Intl.DateTimeFormat(undefined,{weekday:"short",month:"short",day:"numeric",year:"numeric"}).format(new Date(`${row.key}T12:00:00`)))}</td><td><strong>${formatNumber(row.intake||0)} ml</strong></td><td>${formatNumber(row.goal||state.dailyGoal)} ml</td><td>${pct}%</td><td><span class="status-badge${achieved?"":" pending"}">${achieved?"Goal reached":"In progress"}</span></td></tr>`;
+        }).join("")}</tbody></table>`;
+      }
+
+      function renderAnalytics() {
+        const range=$("analyticsRange").value;
+        const count=range==="weekly"?7:30;
+        const keys=getRangeKeys(todayKey(),range);
+        const amounts=keys.map(key=>Number(dateRecord(key).intake||0));
+        const goalDays=getGoalDays().length;
+        const total=amounts.reduce((sum,value)=>sum+value,0);
+        $("analyticsAverage").innerHTML=`${formatNumber(total/count)} <span>ml</span>`;
+        $("analyticsCompletion").innerHTML=`${Math.round(amounts.filter((amount,index)=>amount>=Number(dateRecord(keys[index]).goal||state.dailyGoal)).length/count*100)}<span>%</span>`;
+        $("longestStreak").innerHTML=`${getLongestStreak()} <span>days</span>`;
+        $("chartTitle").textContent=range==="weekly"?"Weekly intake trends":"Monthly intake trends";
+        drawChart(amounts,keys.map(key=>new Intl.DateTimeFormat(undefined,{month:"short",day:"numeric"}).format(new Date(`${key}T12:00:00`))));
+      }
+
+      function drawChart(values,labels) {
+        const canvas=$("intakeChart"),rect=canvas.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        const ratio=window.devicePixelRatio||1;
+        canvas.width=Math.round(rect.width*ratio); canvas.height=Math.round(rect.height*ratio);
+        const ctx=canvas.getContext("2d");
+        ctx.scale(ratio,ratio);
+        const width=rect.width,height=rect.height;
+        const css=getComputedStyle(document.documentElement);
+        const muted=css.getPropertyValue("--muted").trim();
+        const line=css.getPropertyValue("--line").trim();
+        const blue=css.getPropertyValue("--blue").trim();
+        const pad={left:43,right:10,top:12,bottom:29};
+        const plotW=width-pad.left-pad.right,plotH=height-pad.top-pad.bottom;
+        const maxValue=Math.max(state.dailyGoal,...values,500);
+        const scale=Math.ceil(maxValue/4/250)*250 || 250;
+        const max=scale*4;
+        ctx.font="10px system-ui";ctx.textAlign="right";ctx.textBaseline="middle";
+        for(let i=0;i<=4;i++){
+          const y=pad.top+plotH-(i/4)*plotH;
+          ctx.strokeStyle=line;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(width-pad.right,y);ctx.stroke();
+          ctx.fillStyle=muted;ctx.fillText(i===0?"0":`${(max*i/4/1000).toFixed(max*i/4%1000?1:0)}k`,pad.left-8,y);
+        }
+        const goalY=pad.top+plotH-(state.dailyGoal/max)*plotH;
+        ctx.save();ctx.setLineDash([5,4]);ctx.strokeStyle="#9fb8c0";ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(pad.left,goalY);ctx.lineTo(width-pad.right,goalY);ctx.stroke();ctx.restore();
+        const step=plotW/Math.max(1,values.length);
+        const barW=Math.max(2,Math.min(21,step*.56));
+        values.forEach((value,index)=>{
+          const barH=Math.max(value>0?2:0,value/max*plotH);
+          const x=pad.left+index*step+(step-barW)/2;
+          const y=pad.top+plotH-barH;
+          ctx.fillStyle=blue;ctx.beginPath();
+          if(ctx.roundRect) ctx.roundRect(x,y,barW,barH,[4,4,0,0]); else ctx.rect(x,y,barW,barH);
+          ctx.fill();
+        });
+        ctx.fillStyle=muted;ctx.textAlign="center";ctx.textBaseline="top";
+        const labelEvery=values.length<=7?1:5;
+        labels.forEach((label,index)=>{
+          if(index%labelEvery===0 || index===labels.length-1) ctx.fillText(label,pad.left+index*step+step/2,pad.top+plotH+8);
+        });
+      }
+
+      function renderAchievements() {
+        const stats={goalDays:getGoalDays(),longestStreak:getLongestStreak()};
+        const unlockedCount=BADGES.filter(badge=>badge.unlocked(stats)).length;
+        $("badgeSummary").textContent=`${unlockedCount} of ${BADGES.length} unlocked`;
+        $("achievementsGrid").innerHTML=BADGES.map(badge=>{
+          const unlocked=badge.unlocked(stats);
+          return `<article class="card badge-card${unlocked?"":" locked"}"><div class="badge-icon" aria-hidden="true">${badge.icon}</div><div><h3>${badge.title}</h3><p>${badge.description}</p><div class="badge-status">${unlocked?"Unlocked":"Locked"}</div></div></article>`;
+        }).join("");
+      }
+
+      function renderSettings() {
+        if(!state.profile) return;
+        $("settingsName").textContent=state.profile.name;
+        $("settingsDetails").textContent=`${state.profile.age} years · ${formatNumber(state.profile.height)} cm · ${formatNumber(state.profile.weight)} kg`;
+        $("settingsGoal").textContent=`${formatNumber(state.dailyGoal)} ml`;
+        $("darkModeToggle").checked=state.theme==="dark";
+        $("notificationToggle").checked=Boolean(state.notificationEnabled);
+        $("reminderFrequency").value=String(state.reminderFrequency);
+        $("quietStart").value=state.quietStart;
+        $("quietEnd").value=state.quietEnd;
+      }
+
+      function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
+      }
+
+      function validateProfile(form) {
+        const values={
+          name:form.elements.name.value.trim(),
+          age:Number(form.elements.age.value),
+          height:Number(form.elements.height.value),
+          weight:Number(form.elements.weight.value)
+        };
+        const errors={
+          name:!values.name?"Please enter your name.":"",
+          age:!Number.isInteger(values.age)||values.age<1||values.age>120?"Age must be a whole number from 1 to 120.":"",
+          height:!Number.isFinite(values.height)||values.height<50||values.height>250?"Height must be between 50 and 250 cm.":"",
+          weight:!Number.isFinite(values.weight)||values.weight<10||values.weight>300?"Weight must be between 10 and 300 kg.":""
+        };
+        Object.entries(errors).forEach(([key,message])=>{
+          const input=form.elements[key],error=$(key==="name"?"nameError":`${key}Error`);
+          input.setAttribute("aria-invalid",message?"true":"false");error.textContent=message;
+        });
+        return Object.values(errors).every(message=>!message)?values:null;
+      }
+
+      function setFormValues(profile) {
+        $("profileName").value=profile.name;
+        $("profileAge").value=profile.age;
+        $("profileHeight").value=profile.height;
+        $("profileWeight").value=profile.weight;
+        ["name","age","height","weight"].forEach(key=>$(key==="name"?"nameError":`${key}Error`).textContent="");
+      }
+
+      function submitProfile(event) {
+        event.preventDefault();
+        const form=event.currentTarget;
+        const values=validateProfile(form);
+        if(!values) { showToast("Please check the highlighted profile fields.",true);return; }
+        form.classList.add("loading");
+        $("profileSubmit").disabled=true;
+        setTimeout(()=>{
+          const priorGoal=state.dailyGoal;
+          const goal=Math.round(values.weight*35);
+          state.profile=values;state.dailyGoal=goal;
+          if(!state._activeDate) state.currentIntake=0;
+          state._activeDate=todayKey();
+          if(state.history[todayKey()]) state.currentIntake=Number(state.history[todayKey()].intake)||0;
+          if(priorGoal!==goal && state.history[todayKey()]) state.history[todayKey()].goal=goal;
+          recordToday();
+          form.classList.remove("loading");$("profileSubmit").disabled=false;
+          setPage("dashboard");showToast("Profile saved. Your daily goal is ready!");
+        },180);
+      }
+
+      function showCustomModal() {
+        $("customAmount").value="";$("customError").textContent="";$("customAmount").removeAttribute("aria-invalid");
+        $("customModal").classList.add("open");setTimeout(()=>$("customAmount").focus(),0);
+      }
+
+      function closeModal(id) { $(id).classList.remove("open"); }
+
+      function showConfirm(message,action,acceptLabel="Continue") {
+        $("confirmMessage").textContent=message;$("confirmAccept").textContent=acceptLabel;
+        pendingConfirm=action;$("confirmModal").classList.add("open");$("confirmAccept").focus();
+      }
+
+      function exportData() {
+        const data={...state,exportedAt:new Date().toISOString(),app:"Aqua"};
+        try {
+          const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+          const url=URL.createObjectURL(blob);
+          const link=document.createElement("a");link.href=url;link.download=`aqua-data-${todayKey()}.json`;
+          document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
+          showToast("Your Aqua data export is ready.");
+        } catch(error) {
+          console.error("Could not export Aqua data:",error);showToast("Could not export data on this device.",true);
+        }
+      }
+
+      function resetAllData() {
+        try { localStorage.removeItem(STORAGE_KEY); }
+        catch(error) { console.error("Could not clear Aqua data:",error);showToast("Could not clear saved data.",true);return; }
+        state=structuredClone(DEFAULTS);clearInterval(reminderTimer);render();setPage("onboarding");showToast("Aqua data has been reset.");
+      }
+
+      function isQuietTime() {
+        const start=state.quietStart,end=state.quietEnd;
+        if(!start||!end||start===end) return false;
+        const now=new Date(),current=now.getHours()*60+now.getMinutes();
+        const [sh,sm]=start.split(":").map(Number),[eh,em]=end.split(":").map(Number);
+        const startMinute=sh*60+sm,endMinute=eh*60+em;
+        return startMinute<endMinute ? current>=startMinute&&current<endMinute : current>=startMinute||current<endMinute;
+      }
+
+      async function enableReminders(enabled) {
+        if(!enabled) {
+          state.notificationEnabled=false;saveState();clearInterval(reminderTimer);renderSettings();showToast("Hydration reminders are off.");return;
+        }
+        if(!("Notification" in window)) {
+          state.notificationEnabled=false;saveState();renderSettings();showToast("This browser does not support notifications.",true);return;
+        }
+        try {
+          const permission=Notification.permission==="granted"? "granted" : await Notification.requestPermission();
+          if(permission!=="granted") {
+            state.notificationEnabled=false;saveState();renderSettings();showToast("Notification permission was not granted.",true);return;
+          }
+          state.notificationEnabled=true;saveState();scheduleReminders();renderSettings();showToast("Reminders enabled while Aqua is open.");
+        } catch(error) {
+          console.error("Could not enable reminders:",error);state.notificationEnabled=false;saveState();renderSettings();showToast("Could not enable notifications in this browser.",true);
+        }
+      }
+
+      function scheduleReminders() {
+        clearInterval(reminderTimer);
+        if(!state.notificationEnabled || !("Notification" in window) || Notification.permission!=="granted") return;
+        const interval=Math.max(30,Number(state.reminderFrequency)||60)*60*1000;
+        reminderTimer=setInterval(()=>{
+          if(document.visibilityState!=="visible" || isQuietTime() || state.currentIntake>=state.dailyGoal) return;
+          try {
+            new Notification("Aqua hydration reminder",{body:"Take a moment for a sip of water. Every little bit counts.",tag:"aqua-hydration"});
+          } catch(error) { console.error("Could not display hydration reminder:",error); }
+        },interval);
+      }
+
+      document.querySelectorAll(".nav-button").forEach(button=>button.addEventListener("click",()=>setPage(button.dataset.page)));
+      document.querySelectorAll("[data-go]").forEach(button=>button.addEventListener("click",()=>setPage(button.dataset.go)));
+      document.querySelectorAll("[data-add]").forEach(button=>button.addEventListener("click",()=>addWater(Number(button.dataset.add))));
+      document.addEventListener("click",event=>{
+        const button=event.target.closest("button");
+        if(!button || button.disabled) return;
+        const rect=button.getBoundingClientRect(),size=Math.max(rect.width,rect.height);
+        const ripple=document.createElement("span");ripple.className="ripple";ripple.style.width=ripple.style.height=`${size}px`;
+        ripple.style.left=`${event.clientX-rect.left-size/2}px`;ripple.style.top=`${event.clientY-rect.top-size/2}px`;
+        button.appendChild(ripple);setTimeout(()=>ripple.remove(),550);
+      });
+      $("profileForm").addEventListener("submit",submitProfile);
+      $("customAmountButton").addEventListener("click",showCustomModal);
+      $("cancelCustom").addEventListener("click",()=>closeModal("customModal"));
+      $("customModal").addEventListener("click",event=>{if(event.target===$("customModal"))closeModal("customModal");});
+      $("customForm").addEventListener("submit",event=>{
+        event.preventDefault();
+        const input=$("customAmount"),amount=Number(input.value),message=!Number.isInteger(amount)||amount<1||amount>10000?"Enter a whole amount from 1 to 10,000 ml.":"";
+        $("customError").textContent=message;input.setAttribute("aria-invalid",message?"true":"false");
+        if(message){input.focus();return;}
+        closeModal("customModal");addWater(amount);
+      });
+      $("profileName").addEventListener("input",()=>{$("nameError").textContent="";});
+      $("profileAge").addEventListener("input",()=>{$("ageError").textContent="";});
+      $("profileHeight").addEventListener("input",()=>{$("heightError").textContent="";});
+      $("profileWeight").addEventListener("input",()=>{$("weightError").textContent="";});
+      $("resetDayButton").addEventListener("click",()=>showConfirm("This will clear today's logged intake. Your previous day records and profile will stay saved.",()=>{
+        state.currentIntake=0;recordToday();showToast("Today's intake has been reset.");
+      },"Reset today"));
+      $("historyRange").addEventListener("change",renderHistory);
+      $("historyDate").addEventListener("change",renderHistory);
+      $("analyticsRange").addEventListener("change",renderAnalytics);
+      $("editProfileButton").addEventListener("click",()=>{
+        setFormValues(state.profile);$("onboardingTitle").textContent="Edit your profile";
+        $("profileSubmit").textContent="Save profile";setPage("onboarding");
+      });
+      $("profileForm").addEventListener("submit",()=>{
+        if(state.profile) setTimeout(()=>{$("onboardingTitle").textContent="Meet your water goals";$("profileSubmit").textContent="Create Profile";},250);
+      });
+      $("darkModeToggle").addEventListener("change",event=>{
+        state.theme=event.target.checked?"dark":"light";document.documentElement.dataset.theme=state.theme;saveState();showToast(`${event.target.checked?"Dark":"Light"} mode enabled.`);
+        if(currentPage==="analytics")renderAnalytics();
+      });
+      $("notificationToggle").addEventListener("change",event=>enableReminders(event.target.checked));
+      $("reminderFrequency").addEventListener("change",event=>{
+        state.reminderFrequency=Number(event.target.value);saveState();scheduleReminders();showToast("Reminder frequency updated.");
+      });
+      $("quietStart").addEventListener("change",event=>{state.quietStart=event.target.value;saveState();showToast("Quiet hours updated.");});
+      $("quietEnd").addEventListener("change",event=>{state.quietEnd=event.target.value;saveState();showToast("Quiet hours updated.");});
+      $("exportButton").addEventListener("click",exportData);
+      $("resetDataButton").addEventListener("click",()=>showConfirm("This permanently removes your profile, intake history, achievements, and settings from this browser.",resetAllData,"Reset all data"));
+      $("confirmCancel").addEventListener("click",()=>{closeModal("confirmModal");pendingConfirm=null;});
+      $("confirmAccept").addEventListener("click",()=>{
+        const action=pendingConfirm;pendingConfirm=null;closeModal("confirmModal");
+        if(typeof action==="function")action();
+      });
+      $("confirmModal").addEventListener("click",event=>{if(event.target===$("confirmModal")){closeModal("confirmModal");pendingConfirm=null;}});
+      document.addEventListener("keydown",event=>{
+        if(event.key==="Escape"){closeModal("customModal");closeModal("confirmModal");pendingConfirm=null;}
+      });
+      window.addEventListener("resize",()=>{if(currentPage==="analytics")renderAnalytics();});
+      document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){render();scheduleReminders();}});
+      window.addEventListener("storage",event=>{
+        if(event.key===STORAGE_KEY){state=loadState();render();if(state.profile)setPage(currentPage);}
+      });
+      if(state.profile && !state._activeDate) {
+        state._activeDate=todayKey();
+        state.currentIntake=Number(state.history[todayKey()]?.intake)||0;
+      }
+      updateStreak();render();scheduleReminders();
+    })();
+  </script>
+</body>
+</html>
